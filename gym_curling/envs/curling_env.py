@@ -37,10 +37,6 @@ class CurlingEnv(gym.Env):
 
         self.curlingUid = p.loadURDF("Curling.urdf", useFixedBase=True)
 
-        # Reset joint state
-        ##
-        ##
-
         tableUid = p.loadURDF("table.urdf"), [0.5, 0, -0.65]
         tryUid = p.loadURDF("traybox.urdf"), [0.65, 0, 0]
 
