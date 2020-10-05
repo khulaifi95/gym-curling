@@ -18,14 +18,41 @@ class CurlingEnv(gym.Env):
         p.connect(p.GUI)
         p.resetDebugVisualizerCamera(cameraDistance=1.5, cameraYaw=0, cameraPitch=-40,
                                      cameraTargetPosition=[0.55, -0.35, 0.2])
-        # ? continuous space with # axes
-        # Action space:
-        # Observation space:
         self.action_space = spaces.Box(np.array([-1]*3), np.array([1]*3))
         self.observation_space = spaces.Box(np.array([-1]*3), np.array([1]*3))
 
     def step(self, action):
-        pass
+        p.configureDebugVisualizer(p.COV_ENABLE_SINGLE_STEP_RENDERING)
+        orientation = p.getQuaternionFromEuler([0.,-math.pi,math.pi/2.])
+        dv = 0.005
+        dx = action[0] * dv
+        dy = action[1] * dv
+        dz = action[2] * dv
+        fingers = action[3]
+
+        currentPose = p.getLinkState(self.pandaUid, 11)
+        currentPosition = currentPose[0]
+        newPosition = [currentPosition[0] + dx,
+                       currentPosition[1] + dy,
+                       currentPosition[2] + dz]
+        jointPoses = p.calculateInverseKinematics(self.pandaUid,11,newPosition, orientation)
+
+        p.setJointMotorControlArray(self.pandaUid, list(range(7))+[9,10], p.POSITION_CONTROL, list(jointPoses)+2*[fingers])
+
+        p.stepSimulation()
+
+        state_object, _ = p.getBasePositionAndOrientation(self.objectUid)
+        state_robot = p.getLinkState(self.pandaUid, 11)[0]
+        state_fingers = (p.getJointState(self.pandaUid,9)[0], p.getJointState(self.pandaUid, 10)[0])
+        if state_object[2]>0.45:
+            reward = 1
+            done = True
+        else:
+            reward = 0
+            done = False
+        info = state_object
+        observation = state_robot + state_fingers
+        return observation, reward, done, info
 
     def reset(self):
         p.resetSimulation()
